@@ -4,7 +4,11 @@ from package.caixa_pkg import Caixa
 import banco
 
 banco.criar_tabelas()
+
 carrinho = Carrinho()
+for produto in banco.carregar_objetos():
+    carrinho._produtos.append(produto)
+    print(f"  [Carrinho] '{produto.nome}' carregado.")
 
 
 def menu_produtos():
@@ -23,7 +27,7 @@ def menu_produtos():
             tamanho = input("Tamanho (P/M/G): ")
             p = Roupa(nome, preco, tamanho)
             carrinho.adicionar(p)
-            banco.salvar_produto("Roupa", nome, preco, tamanho)
+            banco.salvar_objeto(p)
 
         elif op == "2":
             nome = input("Nome: ")
@@ -31,7 +35,7 @@ def menu_produtos():
             garantia = int(input("Garantia (meses): "))
             p = Eletronico(nome, preco, garantia)
             carrinho.adicionar(p)
-            banco.salvar_produto("Eletronico", nome, preco, str(garantia))
+            banco.salvar_objeto(p)
 
         elif op == "3":
             nome = input("Nome: ")
@@ -39,17 +43,17 @@ def menu_produtos():
             validade = input("Validade (MM/AAAA): ")
             p = Alimento(nome, preco, validade)
             carrinho.adicionar(p)
-            banco.salvar_produto("Alimento", nome, preco, validade)
+            banco.salvar_objeto(p)
 
         elif op == "4":
-            rows = banco.listar_produtos()
-            if not rows:
+            objetos = banco.carregar_objetos()
+            if not objetos:
                 print("  Nenhum produto cadastrado.")
             else:
                 print("\n  Produtos no banco de dados:")
                 print("  " + "-" * 42)
-                for tipo, nome, preco, extra in rows:
-                    print(f"  [{tipo}] {nome} - R$ {preco:.2f} | {extra}")
+                for p in objetos:
+                    print(f"  {p} | {p.descricao()}")
 
         elif op == "0":
             break
@@ -72,7 +76,7 @@ def menu_carrinho():
         elif op == "2":
             nome = input("Nome do produto a remover: ")
             carrinho.remover(nome)
-            banco.remover_produto(nome)
+            banco.remover_objeto(nome)
 
         elif op == "3":
             print(f"\n  Total: R$ {carrinho.total():.2f}")
@@ -99,6 +103,7 @@ def menu_caixa():
                 caixa = Caixa(operador)
                 caixa.finalizar_compra(carrinho)
                 banco.registrar_compra(operador, carrinho.total())
+                banco.limpar_carrinho()
                 carrinho._produtos.clear()
                 print("  Carrinho esvaziado apos compra.")
 

@@ -1,4 +1,5 @@
 import sqlite3
+import json
 
 
 DB = "loja.db"
@@ -12,12 +13,10 @@ def criar_tabelas():
     con = conectar()
     cur = con.cursor()
     cur.execute("""
-        CREATE TABLE IF NOT EXISTS produtos (
+        CREATE TABLE IF NOT EXISTS carrinho (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            tipo TEXT,
             nome TEXT,
-            preco REAL,
-            extra TEXT
+            objeto TEXT
         )
     """)
     cur.execute("""
@@ -32,30 +31,65 @@ def criar_tabelas():
     con.close()
 
 
-def salvar_produto(tipo: str, nome: str, preco: float, extra: str):
+def serializar(produto) -> str:
+    dados = {
+        "tipo": type(produto).__name__,
+        "nome": produto.nome,
+        "preco": produto.preco
+    }
+    if hasattr(produto, "tamanho"):
+        dados["tamanho"] = produto.tamanho
+    elif hasattr(produto, "garantia"):
+        dados["garantia"] = produto.garantia
+    elif hasattr(produto, "validade"):
+        dados["validade"] = produto.validade
+    return json.dumps(dados)
+
+
+def desserializar(texto: str):
+    from package.produtos import Roupa, Eletronico, Alimento
+    dados = json.loads(texto)
+    tipo = dados["tipo"]
+    if tipo == "Roupa":
+        return Roupa(dados["nome"], dados["preco"], dados["tamanho"])
+    elif tipo == "Eletronico":
+        return Eletronico(dados["nome"], dados["preco"], dados["garantia"])
+    elif tipo == "Alimento":
+        return Alimento(dados["nome"], dados["preco"], dados["validade"])
+
+
+def salvar_objeto(produto):
     con = conectar()
     cur = con.cursor()
     cur.execute(
-        "INSERT INTO produtos (tipo, nome, preco, extra) VALUES (?, ?, ?, ?)",
-        (tipo, nome, preco, extra)
+        "INSERT INTO carrinho (nome, objeto) VALUES (?, ?)",
+        (produto.nome, serializar(produto))
     )
     con.commit()
     con.close()
 
 
-def listar_produtos():
+def carregar_objetos():
     con = conectar()
     cur = con.cursor()
-    cur.execute("SELECT tipo, nome, preco, extra FROM produtos")
+    cur.execute("SELECT objeto FROM carrinho")
     rows = cur.fetchall()
     con.close()
-    return rows
+    return [desserializar(row[0]) for row in rows]
 
 
-def remover_produto(nome: str):
+def remover_objeto(nome: str):
     con = conectar()
     cur = con.cursor()
-    cur.execute("DELETE FROM produtos WHERE nome = ?", (nome,))
+    cur.execute("DELETE FROM carrinho WHERE nome = ?", (nome,))
+    con.commit()
+    con.close()
+
+
+def limpar_carrinho():
+    con = conectar()
+    cur = con.cursor()
+    cur.execute("DELETE FROM carrinho")
     con.commit()
     con.close()
 
